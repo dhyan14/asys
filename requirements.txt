@@ -8,4 +8,5 @@ python-dotenv==1.0.0
 Werkzeug==2.3.7
 SQLAlchemy==2.0.20
 pymongo==4.5.0
-dnspython==2.4.2 
+dnspython==2.4.2
+Flask-CORS==4.0.0 

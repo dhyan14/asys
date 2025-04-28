@@ -1,6 +1,7 @@
 // Global variables
 let currentUser = null;
 let currentRole = null;
+let currentUserId = null;
 
 // Login function
 async function login(event) {
@@ -15,15 +16,21 @@ async function login(event) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ username, password }),
+            credentials: 'include'
         });
 
         const data = await response.json();
+        console.log('Login response:', data);  // Debug log
+
         if (response.ok) {
             currentUser = username;
             currentRole = data.role;
+            currentUserId = data.user_id;
+            localStorage.setItem('userRole', data.role);
+            localStorage.setItem('userId', data.user_id);
             showDashboard();
         } else {
-            alert(data.message);
+            alert(data.message || 'Login failed');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -32,15 +39,30 @@ async function login(event) {
 }
 
 // Logout function
-function logout() {
-    currentUser = null;
-    currentRole = null;
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('studentDashboard').style.display = 'none';
-    document.getElementById('parentDashboard').style.display = 'none';
-    document.getElementById('facultyDashboard').style.display = 'none';
-    document.getElementById('adminDashboard').style.display = 'none';
-    document.getElementById('userInfo').style.display = 'none';
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            currentUser = null;
+            currentRole = null;
+            currentUserId = null;
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('studentDashboard').style.display = 'none';
+            document.getElementById('parentDashboard').style.display = 'none';
+            document.getElementById('facultyDashboard').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error during logout');
+    }
 }
 
 // Show appropriate dashboard based on user role
@@ -49,6 +71,13 @@ function showDashboard() {
     document.getElementById('userInfo').style.display = 'block';
     document.getElementById('userRole').textContent = `Logged in as ${currentRole}`;
 
+    // Hide all dashboards first
+    document.getElementById('studentDashboard').style.display = 'none';
+    document.getElementById('parentDashboard').style.display = 'none';
+    document.getElementById('facultyDashboard').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'none';
+
+    // Show the appropriate dashboard
     switch (currentRole) {
         case 'student':
             document.getElementById('studentDashboard').style.display = 'block';

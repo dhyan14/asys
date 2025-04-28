@@ -5,8 +5,10 @@ import os
 from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='static')
+CORS(app, supports_credentials=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 # MongoDB connection
@@ -57,13 +59,26 @@ def load_user(user_id):
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
+    print("Login attempt:", data)  # Debug log
+    
     user_data = users.find_one({'username': data['username']})
+    print("User data found:", user_data)  # Debug log
     
     if user_data and check_password_hash(user_data['password_hash'], data['password']):
         user = User(user_data)
         login_user(user)
-        return jsonify({'message': 'Login successful', 'role': user.role})
+        return jsonify({
+            'message': 'Login successful',
+            'role': user.role,
+            'user_id': str(user.id)
+        })
     return jsonify({'message': 'Invalid credentials'}), 401
+
+@app.route('/api/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logged out successfully'})
 
 @app.route('/api/attendance/<student_id>', methods=['GET'])
 @login_required
