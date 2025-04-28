@@ -1,0 +1,77 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+.btn-success {
+    background-color: #2ecc71;
+    border-color: #2ecc71;
+}
+
+.btn-success:hover {
+    background-color: #27ae60;
+    border-color: #27ae60;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}
+
+.form-control:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.student-attendance {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.student-attendance:last-child {
+    border-bottom: none;
+}
+
+#attendanceList, #studentAttendanceList, #leaveApplicationsList {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.nav-link {
+    color: #fff !important;
+}
+
+#userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+} 

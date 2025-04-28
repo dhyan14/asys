@@ -1,0 +1,259 @@
+// Global variables
+let currentUser = null;
+let currentRole = null;
+
+// Login function
+async function login(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            currentUser = username;
+            currentRole = data.role;
+            showDashboard();
+        } else {
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred during login');
+    }
+}
+
+// Logout function
+function logout() {
+    currentUser = null;
+    currentRole = null;
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('studentDashboard').style.display = 'none';
+    document.getElementById('parentDashboard').style.display = 'none';
+    document.getElementById('facultyDashboard').style.display = 'none';
+    document.getElementById('userInfo').style.display = 'none';
+}
+
+// Show appropriate dashboard based on user role
+function showDashboard() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('userInfo').style.display = 'block';
+    document.getElementById('userRole').textContent = `Logged in as ${currentRole}`;
+
+    switch (currentRole) {
+        case 'student':
+            document.getElementById('studentDashboard').style.display = 'block';
+            loadStudentAttendance();
+            break;
+        case 'parent':
+            document.getElementById('parentDashboard').style.display = 'block';
+            loadStudentAttendance();
+            break;
+        case 'faculty':
+            document.getElementById('facultyDashboard').style.display = 'block';
+            loadCourses();
+            loadLeaveApplications();
+            break;
+    }
+}
+
+// Load student attendance
+async function loadStudentAttendance() {
+    try {
+        const response = await fetch(`/api/attendance/${currentUser}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        const data = await response.json();
+        const attendanceList = document.getElementById('attendanceList');
+        attendanceList.innerHTML = '';
+
+        data.forEach(attendance => {
+            const row = document.createElement('div');
+            row.className = 'row mb-2';
+            row.innerHTML = `
+                <div class="col">${attendance.date}</div>
+                <div class="col">${attendance.course}</div>
+                <div class="col">${attendance.status}</div>
+            `;
+            attendanceList.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading attendance data');
+    }
+}
+
+// Apply for leave
+async function applyLeave(event) {
+    event.preventDefault();
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const reason = document.getElementById('reason').value;
+
+    try {
+        const response = await fetch('/api/leave', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+                student_id: currentUser,
+                start_date: startDate,
+                end_date: endDate,
+                reason: reason,
+                faculty_id: 1 // This should be dynamically set based on the course
+            }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            alert('Leave application submitted successfully');
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('reason').value = '';
+        } else {
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting leave application');
+    }
+}
+
+// Load courses for faculty
+async function loadCourses() {
+    try {
+        const response = await fetch('/api/courses', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        const data = await response.json();
+        const courseSelect = document.getElementById('course');
+        courseSelect.innerHTML = '';
+
+        data.forEach(course => {
+            const option = document.createElement('option');
+            option.value = course.id;
+            option.textContent = course.name;
+            courseSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading courses');
+    }
+}
+
+// Mark attendance
+async function markAttendance(event) {
+    event.preventDefault();
+    const courseId = document.getElementById('course').value;
+    const date = document.getElementById('attendanceDate').value;
+    const students = document.querySelectorAll('.student-attendance');
+
+    try {
+        for (const student of students) {
+            const studentId = student.dataset.studentId;
+            const status = student.querySelector('select').value;
+
+            const response = await fetch('/api/attendance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    course_id: courseId,
+                    date: date,
+                    status: status
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Error marking attendance');
+            }
+        }
+
+        alert('Attendance marked successfully');
+        document.getElementById('attendanceDate').value = '';
+        document.getElementById('studentList').innerHTML = '';
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error marking attendance');
+    }
+}
+
+// Load leave applications for faculty
+async function loadLeaveApplications() {
+    try {
+        const response = await fetch('/api/leave-applications', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        const data = await response.json();
+        const leaveList = document.getElementById('leaveApplicationsList');
+        leaveList.innerHTML = '';
+
+        data.forEach(leave => {
+            const row = document.createElement('div');
+            row.className = 'card mb-2';
+            row.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">Student: ${leave.student_name}</h5>
+                    <p class="card-text">From: ${leave.start_date} To: ${leave.end_date}</p>
+                    <p class="card-text">Reason: ${leave.reason}</p>
+                    <p class="card-text">Status: ${leave.status}</p>
+                    ${leave.status === 'pending' ? `
+                        <button class="btn btn-success" onclick="updateLeaveStatus(${leave.id}, 'approved')">Approve</button>
+                        <button class="btn btn-danger" onclick="updateLeaveStatus(${leave.id}, 'denied')">Deny</button>
+                    ` : ''}
+                </div>
+            `;
+            leaveList.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading leave applications');
+    }
+}
+
+// Update leave status
+async function updateLeaveStatus(leaveId, status) {
+    try {
+        const response = await fetch(`/api/leave/${leaveId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({ status }),
+        });
+
+        if (response.ok) {
+            alert('Leave status updated successfully');
+            loadLeaveApplications();
+        } else {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error updating leave status');
+    }
+} 
