@@ -1,22 +1,33 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='static')
-CORS(app, supports_credentials=True, resources={
-    r"/api/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
 
+# Configure session
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Configure CORS
+CORS(app, 
+     supports_credentials=True,
+     resources={
+         r"/api/*": {
+             "origins": ["*"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "expose_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": True
+         }
+     })
 
 # MongoDB connection
 client = MongoClient('mongodb+srv://devloperasys:devloperasys@asys.6o7l3r1.mongodb.net/?retryWrites=true&w=majority&appName=asys')
@@ -80,7 +91,8 @@ def login():
         
         if user_data and check_password_hash(user_data['password_hash'], data['password']):
             user = User(user_data)
-            login_user(user)
+            login_user(user, remember=True)
+            session.permanent = True
             return jsonify({
                 'message': 'Login successful',
                 'role': user.role,
@@ -99,6 +111,7 @@ def logout():
         
     try:
         logout_user()
+        session.clear()
         return jsonify({'message': 'Logged out successfully'})
     except Exception as e:
         print("Logout error:", str(e))  # Debug log

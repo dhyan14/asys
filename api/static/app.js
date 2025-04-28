@@ -3,6 +3,17 @@ let currentUser = null;
 let currentRole = null;
 let currentUserId = null;
 
+// Check if user is already logged in
+function checkLoginStatus() {
+    const userRole = localStorage.getItem('userRole');
+    const userId = localStorage.getItem('userId');
+    if (userRole && userId) {
+        currentRole = userRole;
+        currentUserId = userId;
+        showDashboard();
+    }
+}
+
 // Login function
 async function login(event) {
     event.preventDefault();
@@ -19,7 +30,8 @@ async function login(event) {
                 'Accept': 'application/json'
             },
             body: JSON.stringify({ username, password }),
-            credentials: 'include'
+            credentials: 'include',
+            mode: 'cors'
         });
 
         console.log('Login response status:', response.status); // Debug log
@@ -52,7 +64,8 @@ async function logout() {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            credentials: 'include'
+            credentials: 'include',
+            mode: 'cors'
         });
 
         if (response.ok) {
@@ -116,6 +129,9 @@ function showDashboard() {
             break;
     }
 }
+
+// Check login status when page loads
+document.addEventListener('DOMContentLoaded', checkLoginStatus);
 
 // Load student attendance
 async function loadStudentAttendance() {
