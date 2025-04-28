@@ -39,6 +39,7 @@ function logout() {
     document.getElementById('studentDashboard').style.display = 'none';
     document.getElementById('parentDashboard').style.display = 'none';
     document.getElementById('facultyDashboard').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'none';
     document.getElementById('userInfo').style.display = 'none';
 }
 
@@ -61,6 +62,10 @@ function showDashboard() {
             document.getElementById('facultyDashboard').style.display = 'block';
             loadCourses();
             loadLeaveApplications();
+            break;
+        case 'admin':
+            document.getElementById('adminDashboard').style.display = 'block';
+            loadUsers();
             break;
     }
 }
@@ -255,5 +260,100 @@ async function updateLeaveStatus(leaveId, status) {
     } catch (error) {
         console.error('Error:', error);
         alert('Error updating leave status');
+    }
+}
+
+// Admin functions
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/users', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        const data = await response.json();
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+
+        data.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td>${user.role}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${user._id}')">Delete</button>
+                </td>
+            `;
+            userList.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading users');
+    }
+}
+
+async function addUser(event) {
+    event.preventDefault();
+    const username = document.getElementById('newUsername').value;
+    const email = document.getElementById('newEmail').value;
+    const password = document.getElementById('newPassword').value;
+    const role = document.getElementById('userRole').value;
+
+    try {
+        const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+                username,
+                email,
+                password,
+                role
+            }),
+        });
+
+        if (response.ok) {
+            alert('User added successfully');
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newEmail').value = '';
+            document.getElementById('newPassword').value = '';
+            loadUsers();
+        } else {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error adding user');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        if (response.ok) {
+            alert('User deleted successfully');
+            loadUsers();
+        } else {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting user');
     }
 } 

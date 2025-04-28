@@ -154,5 +154,58 @@ def get_leave_applications():
         'status': app['status']
     } for app in applications])
 
+# Admin routes
+@app.route('/api/users', methods=['GET'])
+@login_required
+def get_users():
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Unauthorized'}), 403
+    
+    users_list = list(users.find({}, {'password_hash': 0}))
+    return jsonify([{
+        '_id': str(user['_id']),
+        'username': user['username'],
+        'email': user['email'],
+        'role': user['role']
+    } for user in users_list])
+
+@app.route('/api/users', methods=['POST'])
+@login_required
+def create_user():
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    
+    # Check if username or email already exists
+    if users.find_one({'$or': [{'username': data['username']}, {'email': data['email']}]}):
+        return jsonify({'message': 'Username or email already exists'}), 400
+    
+    new_user = {
+        'username': data['username'],
+        'email': data['email'],
+        'password_hash': generate_password_hash(data['password']),
+        'role': data['role']
+    }
+    
+    result = users.insert_one(new_user)
+    return jsonify({'message': 'User created successfully', 'id': str(result.inserted_id)})
+
+@app.route('/api/users/<user_id>', methods=['DELETE'])
+@login_required
+def delete_user(user_id):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Unauthorized'}), 403
+    
+    # Don't allow deleting the admin user
+    user_to_delete = users.find_one({'_id': ObjectId(user_id)})
+    if user_to_delete and user_to_delete['role'] == 'admin':
+        return jsonify({'message': 'Cannot delete admin user'}), 400
+    
+    result = users.delete_one({'_id': ObjectId(user_id)})
+    if result.deleted_count:
+        return jsonify({'message': 'User deleted successfully'})
+    return jsonify({'message': 'User not found'}), 404
+
 if __name__ == '__main__':
     app.run(debug=True) 
