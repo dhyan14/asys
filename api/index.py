@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -6,7 +6,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 # MongoDB connection
@@ -23,6 +23,15 @@ leave_applications = db['leave_applications']
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+# Serve static files
+@app.route('/')
+def index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory(app.static_folder, path)
 
 class User(UserMixin):
     def __init__(self, user_data):
