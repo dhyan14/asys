@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum UserRole {
+  ADMIN
+  FACULTY
+  STUDENT
+  PARENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                 String               @id @default(uuid())
+  name               String
+  email              String               @unique
+  password           String
+  role               UserRole
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  
+  // Relations based on role
+  studentProfile     Student?             // If role is STUDENT
+  facultyProfile     Faculty?             // If role is FACULTY
+  parentProfile      Parent?              // If role is PARENT
+  adminProfile       Admin?               // If role is ADMIN
+  
+  // Common relations
+  leaveApplications  LeaveApplication[]   // For students creating applications
+  reviewedLeaves     LeaveApplication[]   @relation("ReviewedBy") // For faculty reviewing applications
+}
+
+model Student {
+  id             String             @id @default(uuid())
+  rollNumber     String             @unique
+  course         String
+  userId         String             @unique
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId       String?            @unique
+  parent         Parent?            @relation(fields: [parentId], references: [id])
+  attendanceRecords AttendanceRecord[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Faculty {
+  id             String             @id @default(uuid())
+  department     String
+  designation    String
+  userId         String             @unique
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses        Course[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Parent {
+  id             String             @id @default(uuid())
+  relation       String             // e.g., "Father", "Mother", "Guardian"
+  phone          String
+  userId         String             @unique
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student        Student?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Admin {
+  id             String             @id @default(uuid())
+  department     String
+  userId         String             @unique
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Course {
+  id             String             @id @default(uuid())
+  name           String
+  code           String             @unique
+  facultyId      String
+  faculty        Faculty            @relation(fields: [facultyId], references: [id])
+  sessions       Session[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Session {
+  id             String             @id @default(uuid())
+  date           DateTime
+  courseId       String
+  course         Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model AttendanceRecord {
+  id             String             @id @default(uuid())
+  status         AttendanceStatus   @default(ABSENT)
+  sessionId      String
+  session        Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model LeaveApplication {
+  id             String             @id @default(uuid())
+  reason         String
+  startDate      DateTime
+  endDate        DateTime
+  status         LeaveStatus        @default(PENDING)
+  studentId      String
+  student        User               @relation(fields: [studentId], references: [id])
+  reviewedBy     User?              @relation("ReviewedBy", fields: [reviewerId], references: [id])
+  reviewerId     String?
+  comments       String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+} 
