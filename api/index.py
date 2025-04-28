@@ -8,7 +8,14 @@ from bson.objectid import ObjectId
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='static')
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, resources={
+    r"/api/*": {
+        "origins": ["*"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 # MongoDB connection
@@ -56,28 +63,45 @@ def load_user(user_id):
     return None
 
 # Routes
-@app.route('/api/login', methods=['POST'])
+@app.route('/api/login', methods=['POST', 'OPTIONS'])
 def login():
-    data = request.get_json()
-    print("Login attempt:", data)  # Debug log
-    
-    user_data = users.find_one({'username': data['username']})
-    print("User data found:", user_data)  # Debug log
-    
-    if user_data and check_password_hash(user_data['password_hash'], data['password']):
-        user = User(user_data)
-        login_user(user)
-        return jsonify({
-            'message': 'Login successful',
-            'role': user.role,
-            'user_id': str(user.id)
-        })
-    return jsonify({'message': 'Invalid credentials'}), 401
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        data = request.get_json()
+        print("Login attempt:", data)  # Debug log
+        
+        if not data or 'username' not in data or 'password' not in data:
+            return jsonify({'message': 'Missing username or password'}), 400
+        
+        user_data = users.find_one({'username': data['username']})
+        print("User data found:", user_data)  # Debug log
+        
+        if user_data and check_password_hash(user_data['password_hash'], data['password']):
+            user = User(user_data)
+            login_user(user)
+            return jsonify({
+                'message': 'Login successful',
+                'role': user.role,
+                'user_id': str(user.id)
+            })
+        return jsonify({'message': 'Invalid credentials'}), 401
+    except Exception as e:
+        print("Login error:", str(e))  # Debug log
+        return jsonify({'message': 'An error occurred during login'}), 500
 
-@app.route('/api/logout', methods=['POST'])
+@app.route('/api/logout', methods=['POST', 'OPTIONS'])
 @login_required
 def logout():
-    logout_user()
-    return jsonify({'message': 'Logged out successfully'})
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        logout_user()
+        return jsonify({'message': 'Logged out successfully'})
+    except Exception as e:
+        print("Logout error:", str(e))  # Debug log
+        return jsonify({'message': 'An error occurred during logout'}), 500
 
 # ... rest of the existing code ...

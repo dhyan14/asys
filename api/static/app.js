@@ -10,17 +10,22 @@ async function login(event) {
     const password = document.getElementById('password').value;
 
     try {
+        console.log('Attempting login with:', { username }); // Debug log
+
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ username, password }),
             credentials: 'include'
         });
 
+        console.log('Login response status:', response.status); // Debug log
+
         const data = await response.json();
-        console.log('Login response:', data);  // Debug log
+        console.log('Login response data:', data); // Debug log
 
         if (response.ok) {
             currentUser = username;
@@ -30,11 +35,11 @@ async function login(event) {
             localStorage.setItem('userId', data.user_id);
             showDashboard();
         } else {
-            alert(data.message || 'Login failed');
+            alert(data.message || 'Login failed. Please check your credentials.');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred during login');
+        console.error('Login error:', error);
+        alert('An error occurred during login. Please try again.');
     }
 }
 
@@ -43,6 +48,10 @@ async function logout() {
     try {
         const response = await fetch('/api/logout', {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             credentials: 'include'
         });
 
@@ -58,15 +67,20 @@ async function logout() {
             document.getElementById('facultyDashboard').style.display = 'none';
             document.getElementById('adminDashboard').style.display = 'none';
             document.getElementById('userInfo').style.display = 'none';
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Error during logout');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error during logout');
+        console.error('Logout error:', error);
+        alert('Error during logout. Please try again.');
     }
 }
 
 // Show appropriate dashboard based on user role
 function showDashboard() {
+    console.log('Showing dashboard for role:', currentRole); // Debug log
+
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('userInfo').style.display = 'block';
     document.getElementById('userRole').textContent = `Logged in as ${currentRole}`;
@@ -95,6 +109,10 @@ function showDashboard() {
         case 'admin':
             document.getElementById('adminDashboard').style.display = 'block';
             loadUsers();
+            break;
+        default:
+            console.error('Unknown role:', currentRole);
+            alert('Unknown user role. Please contact support.');
             break;
     }
 }
