@@ -20,4 +20,4 @@
             "dest": "api/static/$1"
         }
     ]
-} 
+}
